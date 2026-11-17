@@ -1,89 +1,70 @@
 # Lab: build a coding agent
 
-Tool servers, workers, runs that outlast a process, and a coding agent, each built from the
-same loop. Everything calls the model by plain HTTP and the tool servers by plain JSON-RPC, so
-the code is the wire format.
+A coding agent from scratch: a few general tools, the loop, rules around every call, and what
+the agent knows before it reads a file. It calls the model by plain HTTP, so the code is the
+wire format.
 
 ## Setup
 
 ```bash
 uv sync
 cp .env.example .env          # paste your Gemini key
-uv run reset.py               # fresh state and a fresh workspace/
+uv run reset.py               # workspace/: a fresh copy of the broken repository
 ```
 
 ## Where everything is
 
 | Path | What it is |
 |---|---|
-| `src/agent/` | the loop, the model, the trace, the toolbox, the runs table, compaction |
-| `src/mcp/` | the protocol (version 2026-07-28), a server, a client |
-| `src/servers/` | the desk's servers: `orders`, `payments`, `events`, each run by its own team |
-| `src/desk/` | the investigation agent: instructions, workers, the plan, tool search, durable runs |
-| `src/coder/` | the coding agent: its tools, permissions and hooks, project file and skills |
-| `servers.toml` | the servers the desk connects to, with allow lists |
-| `permissions.toml` | the coding agent's deny and allow rules |
-| `data/desk/seed.json` | the desk's orders, charges and tickets |
-| `data/sample-repo/` | the repository the coding agent works on; `reset.py` copies it to `workspace/` |
-| `data/state/` | refunds, runs, approvals, cut results: emptied by `reset.py` |
+| `src/agent/` | the loop, the model, the trace, the toolbox |
+| `src/coder/tools.py` | the agent's tools: read a file, search, edit by exact string, write a file, run a command |
+| `src/coder/guard.py` | the permission rules and the hooks, checked around every call |
+| `src/coder/context.py` | the instructions, the project file, skills, the explorer |
+| `permissions.toml` | the deny and allow rules |
+| `data/sample-repo/` | a small checkout module whose tests fail, on purpose. `reset.py` copies it to `workspace/` |
+| `try_a_server_rpc_raw.py`, `try_a_server_mcp.py` | two ways to talk to a public MCP server (section 4) |
 
-## Section 1 · Follow the agents
+## Section 1 · A broken repository, fixed by an agent
 
-Run each when the lecture reaches it. Each main is complete; compare it with the one before,
-for example `diff main_4_workers.py main_5_plan.py`.
+The repository in `workspace/` is broken on purpose: some of its tests fail.
+
+```bash
+uv run pytest -q workspace       # the tests: 2 fail
+uv run main_1_coder.py           # the agent finds the bug and fixes it
+uv run pytest -q workspace       # the tests again
+git -C workspace diff            # what the agent changed
+```
+
+1. Before you run the agent, read the failing tests and find the bug yourself. Where is it?
+2. Watch the agent's turns. Which tools did it call, in what order, before it edited anything?
+3. Read the diff. Is the fix the one you would have made? Read `workspace/AGENT.md`, the
+   repository's project file. Does the fix follow it?
+
+## Section 2 · Follow the agent
+
+Each main is complete. Compare it with the one before, for example
+`diff main_1_coder.py main_2_permissions.py`.
 
 | Main | Command | What it adds |
 |---|---|---|
-| 1 | `uv run main_1_server.py` | a tool server and a client; no model |
-| 2 | `uv run main_2_servers.py` | the loop as a client of every server |
-| 3 | `uv run main_3_curate.py` | only some tools in each request: allow lists and a search |
-| 4 | `uv run main_4_workers.py` | a lead that hands work to workers |
-| 5 | `uv run main_5_plan.py` | a plan the run writes, placed last in each request |
-| 6 | `uv run main_6_checkpoint.py --crash-after 2`, then `uv run resume.py <run_id>` | the run as a row; kill and resume |
-| 7 | `uv run main_7_approval.py`, then `uv run approve.py <run_id>` | a person's approval, as a row |
-| 8 | `uv run main_8_compact.py --budget 3000` | cut long results; summarize old turns |
-| 9 | `uv run main_9_coder.py` | a coding agent |
-| 10 | `uv run main_10_permissions.py` | permissions and hooks around every call |
-| 11 | `uv run reset.py --fixed`, then `uv run main_11_project.py` | the project file, skills, an explorer |
+| 1 | `uv run main_1_coder.py` | a coding agent: five general tools and the loop |
+| 2 | `uv run main_2_permissions.py` | permissions and hooks around every call |
+| 3 | `uv run reset.py --fixed`, then `uv run main_3_project.py` | the project file, skills, an explorer |
 
-Main 6 also takes `--crash-after-effect issue_refund`: the process exits right after the
-refund, before the checkpoint. Resume it and read the second `issue_refund` result.
+Main 2 asks you before any command no rule allows. Try
+`uv run main_2_permissions.py "Fix the failing test, then commit and push."` and answer `n` to
+the push. Run `uv run reset.py` between mains to start the repository over.
 
-Run `uv run reset.py` between mains to start the desk and the workspace over.
-
-## Section 2 · Serve a tool
-
-0. **Talk to a server you did not write.** `uv run try_a_public_server.py` sends the discovery
-   methods to DeepWiki's public server and one `tools/call`. Try `--repo` with a public
-   repository you know. Which methods return anything, and which tools does it offer?
-1. **Write a server.** Copy `src/servers/events.py` to `src/servers/shipping.py` and give it
-   one tool, `get_shipment(order_id)`, that returns a carrier, a tracking number and a status
-   (make them up). Add it to `servers.toml` with an allow list.
-2. **Talk to it with no model.** Change `main_1_server.py` to start your server, list its
-   tools, and call yours. Read the request and the reply.
-3. **Use it.** Run `uv run main_4_workers.py "Where is order 88213, and was I charged twice?"`.
-   Did the lead send a worker to your server? What did the worker return?
-4. **Over HTTP.** Run `uv run serve_http.py` in one terminal and, in another,
-   `PAYMENTS_URL=http://localhost:8765/mcp uv run main_2_servers.py`. Nothing else changes.
-5. **Behind a URL.** With a Learner Lab session, `./deploy.sh` puts the payments server in a
-   function behind an API and prints its URL. Run Main 2 with `PAYMENTS_URL` set to it.
-   `./teardown.sh` removes both.
-
-## Section 3 · Build the coding agent
-
-```bash
-uv run reset.py
-```
+## Section 3 · Build on it
 
 1. **Add a tool.** Give `Workspace` in `src/coder/tools.py` a `list_tests()` tool that returns
-   the test names in `tests/`. Run Main 9 and see whether it is used.
+   the test names in `tests/`. Run Main 1 and see whether it is used.
 2. **Add a rule.** In `permissions.toml`, allow `run(git push*)` for a branch named `agent/*`
-   only. Run Main 10 and answer `y` or `n` when asked. What does the agent do after a no?
-3. **Add a hook.** In `src/coder/guard.py`, add a before-call hook that refuses any `write_file`
-   to `tests/` once a test file exists there. Run Main 11 and look for the refusal.
-4. **Kill a run after its effect.** Run
-   `uv run main_6_checkpoint.py --crash-after-effect issue_refund`, then resume it.
-   How many refunds does the charge have? Which line of which file made that true?
+   only. Run Main 2 and answer `y` or `n` when asked. What does the agent do after a no?
+3. **Add a hook.** In `src/coder/guard.py`, add a before-call hook that refuses any
+   `write_file` to `tests/` once a test file exists there. Run Main 3 and look for the refusal.
+4. **Break it yourself.** Put a different bug in `data/sample-repo/src/checkout/cart.py`, run
+   `uv run reset.py`, and see whether the agent finds it.
 
 ## Section 4 · An MCP server you did not write
 
@@ -128,6 +109,6 @@ The same options work with `try_a_server_rpc_raw.py`.
 
 ## Keep
 
-The tokens of the first request in Mains 2 and 3; the lead's and the events worker's largest
-requests in Main 4; the resumed run's second `issue_refund` result; and one command your
-permission rules asked about, with what happened next.
+The tools Main 1 called before its first edit, the diff it made, one command your permission
+rules asked about with what happened next, and one answer from the public server with the
+claim you checked.
