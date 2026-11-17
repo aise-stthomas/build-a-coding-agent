@@ -85,6 +85,25 @@ uv run reset.py
    `uv run main_6_checkpoint.py --crash-after-effect issue_refund`, then resume it.
    How many refunds does the charge have? Which line of which file made that true?
 
+## Section 4 · An MCP server you did not write
+
+DeepWiki runs a public MCP server, `https://mcp.deepwiki.com/mcp`: no login, no key, no model.
+It answers questions about public GitHub repositories. Two scripts send it the same requests,
+two ways:
+
+```bash
+uv run try_a_server_rpc_raw.py      # by hand: raw JSON-RPC over HTTP, every byte visible
+uv run try_a_server_mcp.py          # through the official MCP Python SDK
+```
+
+Each sends `server/discover` (the SDK does it when it connects), `tools/list`, `prompts/list`,
+`resources/list`, and one `tools/call`. Add `--repo owner/name` to ask about a repository you know.
+
+1. Which methods return anything? Which tools does the server offer, and what arguments do they take?
+2. Read `try_a_server_rpc_raw.py`. What does every request carry besides the method and its
+   arguments? Find the same things in `try_a_server_mcp.py`. Where did they go?
+3. Remove the `Mcp-Method` header from the raw script and run it again. What does the server say?
+
 ## Keep
 
 The tokens of the first request in Mains 2 and 3; the lead's and the events worker's largest
