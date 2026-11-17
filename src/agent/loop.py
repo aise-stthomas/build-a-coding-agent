@@ -1,5 +1,5 @@
-"""The loop. The same loop as before, with two places a program can step in:
-`prepare` decides what is sent (the plan, compaction), `after_step` writes the run down."""
+"""The loop: sample, parse, stop, invoke, append, limit. Two places a program can step in:
+`prepare` decides what is sent, and `after_step` runs after every step."""
 from src.agent.messages import (model_message, model_turn, results_message, text_in,
                                 tool_calls_in)
 

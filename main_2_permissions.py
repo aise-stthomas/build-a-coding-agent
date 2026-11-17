@@ -1,4 +1,4 @@
-"""Main 10: permissions and hooks around every call. Deny wins, allow runs, anything else asks.
+"""Main 2: permissions and hooks around every call. Deny wins, allow runs, anything else asks.
 
   uv run main_10_permissions.py "Fix the failing test, then commit and push."
 """

@@ -1,4 +1,4 @@
-"""Main 11: what the agent knows before it reads a file. The project file in every request,
+"""Main 3: what the agent knows before it reads a file. The project file in every request,
 skills by description, and an explorer that reads in its own context."""
 import sys
 

@@ -1,72 +1,53 @@
 """The toolbox: which tools a request declares, and where each call runs.
 
-A tool is either local (a Python function in this process) or remote (a tool on a server,
-reached through a client). The model sees the same declarations either way."""
-import os, sys, tomllib
+Every tool here is a Python function in this process. A function becomes a declaration from
+its signature: the name, the arguments and their types. The description is what you write."""
+import inspect
 from concurrent.futures import ThreadPoolExecutor
+from typing import get_args, get_origin, get_type_hints
 
-from src.mcp.client import Client
-from src.mcp.server import input_schema
-
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+JSON_TYPES = {int: "integer", float: "number", bool: "boolean", str: "string"}
 
 
-def connect(config="servers.toml"):
-    """One client per server in the config; each keeps its allow lists."""
-    clients = {}
-    for name, spec in tomllib.load(open(os.path.join(ROOT, config), "rb")).items():
-        url = os.environ.get(f"{name.upper()}_URL") or spec.get("url")
-        command = [sys.executable if c == "python" else c for c in spec.get("command", [])]
-        client = Client(name, command=None if url else command, url=url)
-        client.allow, client.read = spec.get("allow", []), spec.get("read", [])
-        client.tools = client.list_tools()           # discovery: tools/list
-        clients[name] = client
-    return clients
+def json_type(t):
+    if get_origin(t) is list:
+        return {"type": "array", "items": json_type(get_args(t)[0])}
+    return {"type": JSON_TYPES.get(t, "string")}
 
 
 def declare(fn, description):
-    """A local function as a declaration: the name and arguments come from its signature."""
-    return {"name": fn.__name__, "description": description, "parameters": input_schema(fn)}
-
-
-def for_model(declaration):
-    """An MCP declaration, as the model's provider wants it."""
-    return {"name": declaration["name"], "description": declaration["description"],
-            "parameters": declaration["inputSchema"]}
+    """A function as a declaration: the name and arguments come from its signature."""
+    hints = get_type_hints(fn)
+    properties, required = {}, []
+    for name, param in inspect.signature(fn).parameters.items():
+        properties[name] = json_type(hints.get(name, str))
+        if param.default is inspect.Parameter.empty:
+            required.append(name)
+    return {"name": fn.__name__, "description": description,
+            "parameters": {"type": "object", "properties": properties, "required": required}}
 
 
 class Toolbox:
     def __init__(self):
         self.local = {}        # name -> function in this process
-        self.remote = {}       # name -> the client of the server that has it
         self.declared = []     # what the next request declares, in order
-        self.paused = False    # set by a tool that hands the run to a person
-        self.after_call = None # a hook the program may set: f(name, args, result)
+        self.paused = False    # the loop checks it after each step
 
     def add(self, declaration, fn):
         self.local[declaration["name"]] = fn
         self.declared.append(declaration)
 
-    def add_remote(self, client, names=None):
-        for d in client.tools:
-            if names is None or d["name"] in names:
-                self.remote[d["name"]] = client
-                self.declared.append(for_model(d))
-
     def declarations(self):
         return self.declared
 
     def call(self, name, args):
-        if name in self.local:
-            result = self.local[name](**args)
-        elif name in self.remote:
-            result = self.remote[name].call_tool(name, args)
-        else:
-            result = {"error": f"Unknown tool: {name}. Available tools: "
-                               f"{', '.join(d['name'] for d in self.declared)}"}
-        if self.after_call:
-            self.after_call(name, args, result)
-        return result
+        if name not in self.local:
+            return {"error": f"Unknown tool: {name}. Available tools: "
+                             f"{', '.join(d['name'] for d in self.declared)}"}
+        try:
+            return self.local[name](**args)
+        except Exception as e:
+            return {"error": f"{name} failed: {type(e).__name__}: {e}"}
 
     def call_all(self, calls):
         # Several calls named in one turn run at the same time.

@@ -1,4 +1,8 @@
-"""Main 9: a coding agent. A few general tools on a workspace; the same loop."""
+"""Main 1: a coding agent on a repository whose tests fail. A few general tools, and the loop.
+
+  uv run reset.py
+  uv run main_1_coder.py
+"""
 import sys
 
 from dotenv import load_dotenv

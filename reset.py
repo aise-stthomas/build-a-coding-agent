@@ -1,18 +1,13 @@
-"""Start over: empty the payments refunds, the runs, the cut results, and the coding agent's
-workspace (a fresh copy of data/sample-repo, whose tests fail).
+"""Start over: workspace/ becomes a fresh copy of data/sample-repo, a repository whose tests fail.
 
-  uv run reset.py            the failing repository, for Mains 9 and 10
-  uv run reset.py --fixed    the same repository with the bug fixed, for Main 11
+  uv run reset.py            the broken repository, for Mains 1 and 2
+  uv run reset.py --fixed    the same repository with the bug fixed, for Main 3
 """
 import os, shutil, subprocess, sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-STATE = os.path.join(ROOT, "data", "state")
 WORKSPACE = os.path.join(ROOT, "workspace")
 
-if os.path.isdir(STATE):
-    shutil.rmtree(STATE)
-os.makedirs(STATE)
 if os.path.isdir(WORKSPACE):
     shutil.rmtree(WORKSPACE)
 shutil.copytree(os.path.join(ROOT, "data", "sample-repo"), WORKSPACE,
@@ -24,4 +19,4 @@ if "--fixed" in sys.argv:
 for cmd in (["git", "init", "-q"], ["git", "add", "."],
             ["git", "-c", "user.name=lab", "-c", "user.email=lab@example.com", "commit", "-q", "-m", "start"]):
     subprocess.run(cmd, cwd=WORKSPACE, check=True)
-print("reset: data/state/ emptied; workspace/ is a fresh copy of data/sample-repo/" + (", with the bug fixed" if "--fixed" in sys.argv else ""))
+print("reset: workspace/ is a fresh copy of data/sample-repo/" + (", with the bug fixed" if "--fixed" in sys.argv else ""))
