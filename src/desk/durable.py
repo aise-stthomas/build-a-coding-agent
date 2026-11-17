@@ -62,9 +62,9 @@ def apply_decisions(runs, run_id, clients, contents):
             result = clients["payments"].call_tool("issue_approved_refund", {
                 "charge_id": a["charge_id"], "amount_cents": a["amount_cents"],
                 "approved_by": a["decided_by"]})
-            outcome = f"approved by {a['decided_by']}; refund issued: {result}"
+            outcome = f"approved by {a['decided_by']}. Refund issued: {result}"
         else:
-            outcome = f"declined by {a['decided_by']}; no refund was issued"
+            outcome = f"declined by {a['decided_by']}. No refund was issued"
         runs.mark_applied(a["approval_id"])
         note = {"text": f"Approval {a['approval_id']} for {a['charge_id']}, {a['amount_cents']} cents: {outcome}"}
         if contents and contents[-1]["role"] == "user":

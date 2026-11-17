@@ -49,8 +49,8 @@ class Workspace:
         n = text.count(old)
         if n != 1:
             hint = "Include more of the surrounding lines." if n else "Read the file again."
-            return {"error": f"old was found {n} times in {path}; "
-                             f"it must appear exactly once. {hint}"}
+            return {"error": f"old was found {n} times in {path}. "
+                             f"It must appear exactly once. {hint}"}
         text = text.replace(old, new)
         open(self.path(path), "w").write(text)
         first = text[:text.index(new)].count("\n") + 1

@@ -29,7 +29,7 @@ def main():
     print("run:", run_id)
 
     lead = lead_tools(model, clients, trace, plan)
-    lead.add(REQUEST_APPROVAL, approval_tool(runs, run_id, lead))  # a row; the run pauses
+    lead.add(REQUEST_APPROVAL, approval_tool(runs, run_id, lead))  # a row, and the run pauses
 
     contents = [user_message(TICKET)]
     answer = run(model, LEAD_WITH_WORKERS + PLAN + APPROVAL, contents, lead, trace,
@@ -37,7 +37,7 @@ def main():
 
     print("\nanswer:", answer)
     if lead.paused:
-        print("\nThe run is a row now; no process is waiting.")
+        print("\nThe run is a row now. No process is waiting.")
         print(f"Decide with: uv run approve.py {run_id}")
 
 

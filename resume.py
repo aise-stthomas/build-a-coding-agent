@@ -19,7 +19,7 @@ def resume(run_id):
     runs = Runs()
     row = runs.load(run_id)
     if row["status"] == "done":
-        print(f"{run_id} is done; nothing to resume.")
+        print(f"{run_id} is done. Nothing to resume.")
         return
     print(f"resuming {run_id} after step {row['step']} ({row['status']})")
 

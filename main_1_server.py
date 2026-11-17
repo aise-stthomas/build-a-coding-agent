@@ -9,7 +9,7 @@ def show(label, message):
 
 
 def main():
-    # Start the payments team's server as a process; talk to it over stdin and stdout.
+    # Start the payments server as a process. Talk to it over stdin and stdout.
     command = [sys.executable, "-m", "src.servers.payments"]
     payments = Client("payments", command=command)
 

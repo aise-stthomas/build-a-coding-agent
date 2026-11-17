@@ -22,7 +22,7 @@ def cut(name, result, limit=4000):
     os.makedirs(KEEP, exist_ok=True)
     path = os.path.join(KEEP, f"{name}-{abs(hash(text)) % 10**6}.json")
     open(path, "w").write(text)
-    return {"cut": f"first {limit} of {len(text)} characters; the full result is in {os.path.relpath(path)}",
+    return {"cut": f"first {limit} of {len(text)} characters. The full result is in {os.path.relpath(path)}",
             "start": text[:limit]}
 
 
