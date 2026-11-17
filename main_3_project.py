@@ -10,8 +10,8 @@ from src.agent.messages import user_message
 from src.agent.model import Model
 from src.agent.toolbox import Toolbox
 from src.agent.trace import Trace
-from src.coder.context import (EXPLORE, INSTRUCTIONS, LOAD_SKILL, explorer, project_file,
-                               skill_list, skill_loader)
+from src.coder.context import (EXPLORE, EXPLORE_HINT, INSTRUCTIONS, LOAD_SKILL, explorer,
+                               project_file, skill_list, skill_loader)
 from src.coder.guard import Permissions, guarded
 from src.coder.tools import Workspace
 
@@ -30,7 +30,7 @@ def main():
     tools.add(EXPLORE, explorer(model, workspace, trace))       # reads in its own context
     guarded(tools, workspace, Permissions())
 
-    system = INSTRUCTIONS + project_file(workspace) + skill_list(workspace)
+    system = INSTRUCTIONS + EXPLORE_HINT + project_file(workspace) + skill_list(workspace)
     answer = run(model, system, [user_message(REQUEST)], tools, trace, max_steps=30)
 
     print("\nanswer:", answer)

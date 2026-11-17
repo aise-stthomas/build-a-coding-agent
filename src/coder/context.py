@@ -8,9 +8,12 @@ from src.agent.toolbox import Toolbox
 
 INSTRUCTIONS = """You are a coding agent working in a repository. Use the tools to read, search,
 edit and run commands. Read a file before you edit it. Run the tests after every change. Do not
-change tests to make them pass unless the request asks for new tests. When a question needs
-several files read, hand it to explore rather than reading them yourself. Finish with two or three
+change tests to make them pass unless the request asks for new tests. Finish with two or three
 sentences: what was wrong or what was asked, what you changed, and the test result."""
+
+EXPLORE_HINT = """
+
+When a question needs several files read, hand it to explore rather than reading them yourself."""
 
 
 def project_file(workspace):
