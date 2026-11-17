@@ -97,12 +97,34 @@ uv run try_a_server_mcp.py          # through the official MCP Python SDK
 ```
 
 Each sends `server/discover` (the SDK does it when it connects), `tools/list`, `prompts/list`,
-`resources/list`, and one `tools/call`. Add `--repo owner/name` to ask about a repository you know.
+`resources/list`, and one `tools/call`. Both take the same options:
+
+| Option | What it does |
+|---|---|
+| `--repo owner/name [...]` | which public GitHub repositories (one, or several for `--ask`) |
+| `--ask "question"` | calls `ask_wiki_question`: an answer about the code, citing files |
+| `--contents` | calls `read_wiki_contents`: the repository's whole generated documentation |
+| `--discover-only` | only the discovery methods, no tool call |
+| `--chars N` | how much of a tool's answer to print (default 1500) |
+
+With no `--ask` or `--contents`, the call is `read_wiki_structure`, the outline of the
+documentation. Questions to try (an answer takes about 15 seconds):
+
+```bash
+uv run try_a_server_mcp.py --repo pytorch/pytorch
+uv run try_a_server_mcp.py --repo pytorch/pytorch --ask "How does autograd record the operations on a tensor?"
+uv run try_a_server_mcp.py --repo meta-llama/llama --ask "How are rotary position embeddings applied to queries and keys?"
+uv run try_a_server_mcp.py --repo pytorch/pytorch meta-llama/llama --ask "How does each one implement scaled dot-product attention?"
+```
+
+The same options work with `try_a_server_rpc_raw.py`.
 
 1. Which methods return anything? Which tools does the server offer, and what arguments do they take?
 2. Read `try_a_server_rpc_raw.py`. What does every request carry besides the method and its
    arguments? Find the same things in `try_a_server_mcp.py`. Where did they go?
 3. Remove the `Mcp-Method` header from the raw script and run it again. What does the server say?
+4. Ask a question about a repository you use at work or in another course. Check one claim in
+   the answer against the code it cites.
 
 ## Keep
 
