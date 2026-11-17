@@ -38,12 +38,13 @@ class Permissions:
 def ask_person(name, args):
     s = subject(name, args)
     scripted = os.environ.get("ASK_ANSWER")              # for recorded demos: yes or no
-    answer = scripted if scripted else input(f"\n  allow {s}? [y/N] ")
+    # Asked while the call runs, so this prints just before the step that named it.
+    answer = scripted if scripted else input(f"\n  the agent named {s}, and no rule allows it. Allow it? [y/N] ")
     print(f"  asked: {s} -> {answer}")
     return answer.strip().lower() in ("y", "yes")
 
 
-def before_call(name, args):
+def before_call(workspace, name, args):
     """A hook: refuse edits to generated files, whatever the permissions say."""
     if name in ("edit_file", "write_file") and args.get("path", "").startswith("src/generated/"):
         return "src/generated/ is generated from the payments schema; change the schema instead"
@@ -70,7 +71,7 @@ def guarded(toolbox, workspace, permissions):
             return {"error": f"denied by a rule: {subject(name, args)}"}
         if decision == "ask" and not ask_person(name, args):
             return {"error": f"the person said no to {subject(name, args)}"}
-        blocked = before_call(name, args)
+        blocked = before_call(workspace, name, args)
         if blocked:
             return {"error": f"blocked by a hook: {blocked}"}
         return after_call(workspace, name, args, call(name, args))

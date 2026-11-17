@@ -37,6 +37,13 @@ ap.add_argument("--args", default="{}", help="the tool's arguments, as JSON")
 args = ap.parse_args()
 
 
+
+def argument_types(schema):
+    """Each argument and its JSON type, from a tool's inputSchema."""
+    def kind(v):
+        return " or ".join(x.get("type", "?") for x in v["anyOf"]) if "anyOf" in v else v.get("type", "any")
+    return ", ".join(f"{k} ({kind(v)})" for k, v in schema.get("properties", {}).items())
+
 def which_call():
     """The tool and arguments the options ask for, or None."""
     if args.discover_only:
@@ -60,7 +67,8 @@ def send(method, params=None):
                   "io.modelcontextprotocol/clientCapabilities": {},
                   "io.modelcontextprotocol/clientInfo": {"name": "build-a-coding-agent", "version": "0.1.0"}}}}
     headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream",
-               "MCP-Protocol-Version": VERSION, "Mcp-Method": method}
+               "MCP-Protocol-Version": VERSION}
+    headers["Mcp-Method"] = method          # the method again, as a header: required over HTTP
     if method == "tools/call":
         headers["Mcp-Name"] = params["name"]
     req = urllib.request.Request(args.url, json.dumps(message).encode(), headers)
@@ -69,6 +77,8 @@ def send(method, params=None):
             body = r.read().decode()
     except urllib.error.HTTPError as e:
         body = e.read().decode()
+    except urllib.error.URLError as e:
+        raise SystemExit(f"no server answered at {args.url}: {e.reason}. Is it running?")
     # A reply is either one JSON object or a short event stream whose data line holds it.
     for line in body.splitlines():
         if line.startswith("data:"):
@@ -88,7 +98,7 @@ tools = reply.get("result", {}).get("tools", [])
 print(f"\n== tools/list: {len(tools)} tools")
 for t in tools:
     print(f"  {t['name']:<24} {t['description'][:80]}")
-    print(f"  {'':<24} arguments: {', '.join(t['inputSchema'].get('properties', {}))}")
+    print(f"  {'':<24} arguments: {argument_types(t['inputSchema'])}")
 
 show("prompts/list", send("prompts/list"), 300)
 show("resources/list", send("resources/list"), 300)

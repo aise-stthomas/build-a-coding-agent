@@ -37,6 +37,13 @@ ap.add_argument("--args", default="{}", help="the tool's arguments, as JSON")
 args = ap.parse_args()
 
 
+
+def argument_types(schema):
+    """Each argument and its JSON type, from a tool's inputSchema."""
+    def kind(v):
+        return " or ".join(x.get("type", "?") for x in v["anyOf"]) if "anyOf" in v else v.get("type", "any")
+    return ", ".join(f"{k} ({kind(v)})" for k, v in schema.get("properties", {}).items())
+
 def which_call():
     """The tool and arguments the options ask for, or None."""
     if args.discover_only:
@@ -62,7 +69,7 @@ async def main():
         print(f"\n== tools/list: {len(tools)} tools")
         for t in tools:
             print(f"  {t.name:<24} {(t.description or '')[:80]}")
-            print(f"  {'':<24} arguments: {', '.join(t.input_schema.get('properties', {}))}")
+            print(f"  {'':<24} arguments: {argument_types(t.input_schema)}")
 
         prompts = (await client.list_prompts()).prompts          # prompts/list
         resources = (await client.list_resources()).resources  # resources/list
@@ -77,4 +84,18 @@ async def main():
             print("  " + text[:args.chars].replace("\n", "\n  ") + ("\n  ..." if len(text) > args.chars else ""))
 
 
-asyncio.run(main())
+
+
+def connection_failed(e):
+    """True when the failure, perhaps inside an exception group, is that nothing answered."""
+    if isinstance(e, BaseExceptionGroup):
+        return any(connection_failed(x) for x in e.exceptions)
+    return "ConnectError" in type(e).__name__ or isinstance(e, (ConnectionError, OSError))
+
+
+try:
+    asyncio.run(main())
+except Exception as e:
+    if not connection_failed(e):
+        raise
+    raise SystemExit(f"no server answered at {args.url}. Is it running?")

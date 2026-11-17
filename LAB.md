@@ -54,16 +54,24 @@ Each main is complete. Compare it with the one before, for example
 
 Main 2 asks you before any command no rule allows. Try
 `uv run main_2_permissions.py "Fix the failing test, then commit and push."` and answer `n` to
-the push. Run `uv run reset.py` between mains to start the repository over.
+the push. The workspace's `origin` is a folder on your laptop, `data/state/origin.git`, so a
+push you allow goes nowhere public: `git -C workspace ls-remote origin` shows what reached it.
+Run `uv run reset.py` between mains to start the repository over.
 
 ## Section 3 · Build on it
 
 1. **Add a tool.** Give `Workspace` in `src/coder/tools.py` a `list_tests()` tool that returns
-   the test names in `tests/`. Run Main 1 and see whether it is used.
-2. **Add a rule.** In `permissions.toml`, allow `run(git push*)` for a branch named `agent/*`
-   only. Run Main 2 and answer `y` or `n` when asked. What does the agent do after a no?
-3. **Add a hook.** In `src/coder/guard.py`, add a before-call hook that refuses any
-   `write_file` to `tests/` once a test file exists there. Run Main 3 and look for the refusal.
+   the test names in `tests/`, and add it to the list in `tools()`. Run Main 1 and see whether
+   it is used. Main 2 will ask before calling it until you add `list_tests(*)` to the allow rules.
+2. **Add a rule.** In `permissions.toml`, allow creating and pushing a branch named `agent/*`
+   only: `run(git checkout -b agent/*)` and `run(git push origin agent/*)`. Then run
+   `uv run main_2_permissions.py "Fix the failing test, commit it on a new branch named agent/fix-tax, and push that branch to origin."`
+   and answer `n` to anything it asks. Which commands asked, and why did each one not match?
+   What does the agent do after a no? Check what reached `origin`.
+3. **Add a hook.** In `before_call` in `src/coder/guard.py`, refuse a `write_file` that would
+   replace a file that already exists in `tests/` (`workspace.path(path)` gives its full path, as a string).
+   Run `uv run reset.py --fixed` and Main 3, and look for the refusal. What does the agent do
+   instead?
 4. **Break it yourself.** Put a different bug in `data/sample-repo/src/checkout/cart.py`, run
    `uv run reset.py`, and see whether the agent finds it.
 
