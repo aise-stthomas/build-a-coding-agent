@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.py[cod]
+.venv/
+.DS_Store
+# made by reset.py and by runs
+workspace/
+data/state/
+data/wire/
+build/
+.pytest_cache/
