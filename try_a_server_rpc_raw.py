@@ -12,6 +12,7 @@ Options (the same in both scripts):
   --discover-only             only the discovery methods, no tool call
   --chars N                   print at most N characters of a tool's answer (default 1500)
   --url <server URL>          another server that speaks 2026-07-28 (default: DeepWiki)
+  --tool NAME --args JSON     call any tool by name, with its arguments as JSON
 
 With no --ask or --contents, the call is read_wiki_structure: the outline of the documentation.
 
@@ -31,6 +32,8 @@ ap.add_argument("--ask", metavar="QUESTION")
 ap.add_argument("--contents", action="store_true")
 ap.add_argument("--discover-only", action="store_true")
 ap.add_argument("--chars", type=int, default=1500)
+ap.add_argument("--tool", help="call this tool instead of a DeepWiki one")
+ap.add_argument("--args", default="{}", help="the tool's arguments, as JSON")
 args = ap.parse_args()
 
 
@@ -38,6 +41,8 @@ def which_call():
     """The tool and arguments the options ask for, or None."""
     if args.discover_only:
         return None
+    if args.tool:
+        return args.tool, json.loads(args.args)
     if args.ask:
         return "ask_wiki_question", {"repoName": args.repo if len(args.repo) > 1 else args.repo[0],
                                      "question": args.ask}

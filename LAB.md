@@ -22,7 +22,8 @@ uv run reset.py               # workspace/: a fresh copy of the broken repositor
 | `src/coder/context.py` | the instructions, the project file, skills, the explorer |
 | `permissions.toml` | the deny and allow rules |
 | `data/sample-repo/` | a small checkout module whose tests fail, on purpose. `reset.py` copies it to `workspace/` |
-| `try_a_server_rpc_raw.py`, `try_a_server_mcp.py` | two ways to talk to a public MCP server (section 4) |
+| `try_a_server_rpc_raw.py`, `try_a_server_mcp.py` | two ways to talk to an MCP server (sections 4 and 5) |
+| `hello_server.py` | the smallest MCP server: one tool, on your laptop (section 5) |
 
 ## Section 1 · A broken repository, fixed by an agent
 
@@ -107,8 +108,32 @@ The same options work with `try_a_server_rpc_raw.py`.
 4. Ask a question about a repository you use at work or in another course. Check one claim in
    the answer against the code it cites.
 
+## Section 5 · Your own MCP server
+
+`hello_server.py` is a tool server in a few lines: one tool, `say_hello(name)`, served over HTTP
+on your laptop with the MCP SDK. Use two terminals.
+
+```bash
+uv run hello_server.py            # terminal 1: the server. Leave it running.
+```
+
+```bash
+uv run try_a_server_mcp.py --url http://127.0.0.1:8000/mcp --tool say_hello --args '{"name": "Ana"}'
+uv run try_a_server_rpc_raw.py --url http://127.0.0.1:8000/mcp --tool say_hello --args '{"name": "Raj"}'
+```
+
+Terminal 1 prints a line for every call it answers, and the reply names the server's process and
+counts the calls, so you can see that your server did the work.
+
+1. Find the server's process number in terminal 1 and in the reply. Run a client twice. What
+   changes in the reply, and why?
+2. Stop the server (Ctrl-C) and run a client again. What happens?
+3. Add a second tool to `hello_server.py`, for example `add(a: int, b: int) -> int`. Restart the
+   server and run `try_a_server_mcp.py --url http://127.0.0.1:8000/mcp --discover-only`. Does it
+   list your tool? What arguments does it say the tool takes, and where did that come from?
+
 ## Keep
 
 The tools Main 1 called before its first edit, the diff it made, one command your permission
-rules asked about with what happened next, and one answer from the public server with the
-claim you checked.
+rules asked about with what happened next, one answer from the public server with the claim
+you checked, and the reply from your own server's second tool.
